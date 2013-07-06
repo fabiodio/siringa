@@ -64,7 +64,7 @@
     <ClCompile Include="siringa.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="detours.h" />
+    <ClInclude Include="detours\detours.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="siringa.h" />
   </ItemGroup>
@@ -72,7 +72,7 @@
     <ResourceCompile Include="siringa.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Library Include="detours.lib" />
+    <Library Include="detours\detours.lib" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

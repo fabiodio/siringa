@@ -7,8 +7,8 @@
 #include <stdio.h>
 #include <tlhelp32.h>
 #include <Psapi.h>
+#include "detours/detours.h"
 #include "resource.h"
-#include "detours.h"
 
 #define APP_NAME "Siringa"
 #define APP_AUTHOR "Fab1o"

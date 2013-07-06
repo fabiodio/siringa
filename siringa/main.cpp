@@ -33,8 +33,6 @@ bool bFileExists( const char *fileName )
 
 int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-	bAutoInject = false;
-
 	memset(szExe, 0, sizeof(szExe));
 	memset(szDll, 0, sizeof(szDll));
 
