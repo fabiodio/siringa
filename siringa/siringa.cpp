@@ -98,10 +98,19 @@ DWORD dwInjThread()
 {
 	while(1)
 	{
+		GetDlgItemText( GetForegroundWindow(), IDC_EXE, szExe, MAX_PATH );
 		if( bIsProcessRunning( szExe ) )
-			CreateRemoteThreadInjection( GetProcessId( szExe ), szDll );
+		{
+			for( int i = 0; i < MAX_DLLS; i++ )
+			{
+				if( !strlen( szDll[ i ] ) )
+					continue;
 
-		Sleep( 500 );
+				CreateRemoteThreadInjection( GetProcessId( szExe ), szDll[ i ] );
+			}
+
+			Sleep( 500 );
+		}
 	}
 
 	return 0;

@@ -6,7 +6,7 @@ HINSTANCE g_hInstance = NULL;
 HANDLE hInjThread = NULL;
 
 char szExe[ MAX_PATH ];
-char szDll[ MAX_PATH ];
+char szDll[ MAX_DLLS ][ MAX_PATH ];
 
 bool GetDllDialog( char * szDll )
 {
@@ -60,14 +60,41 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 	case WM_COMMAND:
 		switch( wParam )
 		{
-		case IDC_BROWSE:
-			GetDllDialog( szDll );
-			SetDlgItemTextA( hDlg, IDC_DLL, szDll );
+		case IDC_ADDDLL:
+			char filePath[ MAX_PATH ], fileDll[ MAX_PATH ];
+			memset( filePath, 0, sizeof( filePath ) );
+			memset( fileDll, 0, sizeof( fileDll ) );
+			GetDllDialog( filePath );
+			/* file name
+			char *ptr = filePath;
+			while( *ptr ) *ptr++;
+			while( *ptr != '\\' ) *ptr--; *ptr++;
+			strcpy_s( fileDll, ptr );
+			*/
+			SendMessage( GetDlgItem( hDlg, IDC_LISTDLL ), LB_ADDSTRING, NULL, ( LPARAM )filePath );
 			break;
-		case IDC_BUTTON1:
-			GetDlgItemText(hDlg, IDC_EXE, szExe, MAX_PATH );
-			GetDlgItemText(hDlg, IDC_DLL, szDll, MAX_PATH );
-			CreateRemoteThreadInjection( GetProcessId( szExe ), szDll);
+		case IDC_DELDLL:
+			LRESULT selectedItm = SendMessage( GetDlgItem( hDlg, IDC_LISTDLL ), LB_GETCURSEL, NULL, NULL );
+			SendMessage( GetDlgItem( hDlg, IDC_LISTDLL ), LB_DELETESTRING, selectedItm, NULL );
+			break;
+		}
+		switch( LOWORD( wParam ) )
+		{
+		case IDC_LISTDLL:
+			if( HIWORD( wParam ) == LBN_SELCHANGE )
+			{
+				int iBuffer[ MAX_DLLS ];
+				memset( iBuffer, 0, MAX_DLLS );
+				memset( szDll, 0, sizeof( szDll ) );
+
+				HWND hListBox = GetDlgItem( hDlg, IDC_LISTDLL );
+				LRESULT itemsInBuffer = SendMessage( hListBox, LB_GETSELITEMS, MAX_DLLS, ( LPARAM )iBuffer );
+			
+				for( int i = 0; i < ( int )itemsInBuffer; i++ )
+				{
+					SendMessage( hListBox, LB_GETTEXT, iBuffer[ i ], ( LPARAM )szDll[ i ] );
+				}
+			}
 			break;
 		}
 		return true;

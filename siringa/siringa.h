@@ -12,11 +12,12 @@
 
 #define APP_NAME "Siringa"
 #define APP_AUTHOR "Fab1o"
+#define MAX_DLLS 25
 #define Popup( text ) MessageBox( GetForegroundWindow(), text, APP_NAME, MB_OK );
 
 extern DWORD dwInjThread();
 extern char szExe[ MAX_PATH ];
-extern char szDll[ MAX_PATH ];
+extern char szDll[ MAX_DLLS ][ MAX_PATH ];
 
 DWORD GetProcessId( char *szExeName );
 BOOL CreateRemoteThreadInjection( DWORD dwProcId, const char *szDllName );
