@@ -11,19 +11,19 @@ bool bIsProcessRunning( char *szExeName )
 		return false;
 
 	char szProcessName[MAX_PATH], szProcessName2[MAX_PATH];
-    DWORD aProcesses[1024], cb, cProcesses;
+	DWORD aProcesses[1024], cb, cProcesses;
 	HANDLE hProcess = NULL;
 	HMODULE hMod = NULL;
 	UINT i = 0;
 
 	memcpy( szProcessName2, szExeName, sizeof( szProcessName2 ) );
 
-    if( !EnumProcesses( aProcesses, sizeof( aProcesses ), &cb ) )
-        return FALSE;
+	if( !EnumProcesses( aProcesses, sizeof( aProcesses ), &cb ) )
+		return FALSE;
 
-    cProcesses = cb / sizeof( DWORD );
+	cProcesses = cb / sizeof( DWORD );
 
-    for( i = 0; i < cProcesses; i++ )
+	for( i = 0; i < cProcesses; i++ )
 	{
 		hProcess = OpenProcess( PROCESS_ALL_ACCESS, FALSE, aProcesses[i] );
 
@@ -239,8 +239,8 @@ HANDLE bCreateRemoteThread( HANDLE hHandle, LPVOID loadLibAddr, LPVOID dllPathAd
 
 	LPVOID ntCreateThreadExAddr = NULL;
 	NtCreateThreadExBuffer ntbuffer;
-	DWORD temp1 = 0; 
-	DWORD temp2 = 0; 
+	DWORD temp1 = 0;
+	DWORD temp2 = 0;
 
 	ntCreateThreadExAddr = GetProcAddress( GetModuleHandle( TEXT( "ntdll.dll" ) ), "NtCreateThreadEx" );
 
@@ -261,8 +261,8 @@ HANDLE bCreateRemoteThread( HANDLE hHandle, LPVOID loadLibAddr, LPVOID dllPathAd
   
 		if ( !hThread )
 		{
-			Popup( "NtCreateThreadEx Failed! [%d][%08x]\n", GetLastError(), status );
-			return false;
+			Popup( "NtCreateThreadEx Failed [%d][%08x]", GetLastError(), status );
+			return 0;
 		} 
 		else
 			return hThread;
@@ -270,7 +270,7 @@ HANDLE bCreateRemoteThread( HANDLE hHandle, LPVOID loadLibAddr, LPVOID dllPathAd
 	else
 		Popup( "Could not find NtCreateThreadEx" );
 
-	return false;
+	return 0;
 }
 
 BOOL NtCreateThreadExInjection( DWORD dwProcId, const char *szDllName )
@@ -290,6 +290,52 @@ BOOL NtCreateThreadExInjection( DWORD dwProcId, const char *szDllName )
 	return true;
 }
 
+HANDLE bRtlCreateUserThread( HANDLE hHandle, LPVOID loadLibAddr, LPVOID dllPathAddr )
+{
+	HANDLE hThread = NULL;
+	LPVOID rtlCreateUserAddr = NULL;
+
+	CLIENT_ID cId;
+
+	rtlCreateUserAddr = GetProcAddress( GetModuleHandle( "ntdll.dll" ), "RtlCreateUserThread" );
+
+	if( rtlCreateUserAddr )
+	{
+		LPFUN_RtlCreateUserThread funRtlCreateUserThread = ( LPFUN_RtlCreateUserThread )rtlCreateUserAddr;
+
+		NTSTATUS status = funRtlCreateUserThread( hHandle, NULL, false, 0, 0, 0, loadLibAddr, dllPathAddr, &hThread, &cId );
+
+		if( hThread == NULL )
+		{
+			Popup( "NtCreateThreadEx Failed [%d][%08x]" );
+			return 0;
+		}
+		else
+			return hThread;
+	}
+	else
+		Popup( "Could not find RtlCreateUserThread" );
+	
+	return 0;
+}
+
+BOOL RtlCreateUserThreadInjection( DWORD dwProcId, const char *szDllName )
+{
+	if(!dwProcId)
+		return false;
+
+	HANDLE hProc = OpenProcess( PROCESS_ALL_ACCESS, FALSE, dwProcId );
+	LPVOID memory = VirtualAllocEx( hProc, NULL, strlen( szDllName ), MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE );
+	WriteProcessMemory( hProc, memory, szDllName, strlen( szDllName ), NULL );
+	
+	HANDLE hThread = bRtlCreateUserThread( hProc, ( LPTHREAD_START_ROUTINE )GetProcAddress( GetModuleHandle( "kernel32.dll" ), "LoadLibraryA" ), memory );
+	WaitForSingleObject( hThread, INFINITE );
+
+	CloseHandle( hThread );
+
+	return true;
+}
+
 DWORD dwInjThread()
 {
 	while(1)
@@ -298,11 +344,14 @@ DWORD dwInjThread()
 		{
 			for( int i = 0; i < MAX_DLLS; i++ )
 			{
+				if( i == ( MAX_DLLS - 1 ) )
+				{
+					Sleep( 500 );
+					exit(0);
+				}
+
 				if( !strlen( szDll[i] ) )
 					continue;
-
-				if( i == ( MAX_DLLS - 1 ) )
-				exit(0);
 
 				switch( iMethod )
 				{
@@ -313,9 +362,12 @@ DWORD dwInjThread()
 					NtCreateThreadExInjection( GetProcessId( szExe ), szDll[i] );
 					break;
 				case 2:
-					WindowsHookInjection( GetProcessId( szExe ), szDll[i] );
+					RtlCreateUserThreadInjection( GetProcessId( szExe ), szDll[i] );
 					break;
 				case 3:
+					WindowsHookInjection( GetProcessId( szExe ), szDll[i] );
+					break;
+				case 4:
 					APCInjection( GetProcessId( szExe ), szDll[i] );
 					break;
 				}

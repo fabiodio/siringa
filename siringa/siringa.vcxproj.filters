@@ -46,4 +46,15 @@
       <Filter>detours</Filter>
     </Library>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\Desktop\siringa.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="icon1.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="siringa.ico">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

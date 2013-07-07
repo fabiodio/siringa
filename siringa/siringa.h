@@ -1,14 +1,18 @@
 /****************************************************
  *	Siringa
  *	author:	Fab1o (fabiodio)
- *	info:	Dll injection tool
- *	notes:	It supports 4 injection modules:
+ *	infos:	Dll injection tool
+ *	notes:	It supports 4 injection methods:
  *			CreateRemoteThread, NtCreateThreadEx,
- *			SetWindowsHook, QueueUserAPC.
+ *			RtlCreateUserThread, SetWindowsHook, 
+ *			QueueUserAPC.
  *			Auto/manual-injection, multiple .dll
  *			injection.
- *	TODO:	Game profiles, start-up injection,
- *			start-up injection w/ command.
+ *	thanks:	undocumented.ntinternals.net - for the
+ *			structs ofundocumented  native funcs;
+ *			Sinner - application inspiration.
+ *	TODO:	Game profiles, spawn-injection,
+ *			spawn-injection w/ command.
  ***************************************************/
 #pragma once
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
@@ -37,10 +41,6 @@ extern char szDll[MAX_DLLS][MAX_PATH];
 extern int iMethod;
 extern int bAuto;
 
-/********************************************************************
- *	Thanks to securityxploded.com
- *	Struct and typedefinition for NtCreateThreadEx injection module
- *******************************************************************/
 struct NtCreateThreadExBuffer
 {
 	ULONG Size;
@@ -68,9 +68,30 @@ typedef NTSTATUS (WINAPI *LPFUN_NtCreateThreadEx)(
 	OUT LPVOID lpBytesBuffer
 );
 
+typedef struct _CLIENT_ID
+{
+     PVOID UniqueProcess;
+     PVOID UniqueThread;
+} CLIENT_ID, *PCLIENT_ID;
+
+typedef NTSTATUS ( WINAPI *LPFUN_RtlCreateUserThread )(
+	IN HANDLE ProcessHandle,
+	IN PSECURITY_DESCRIPTOR SecurityDescriptor,
+	IN BOOLEAN CreateSuspended,
+	IN ULONG StackZeroBits,
+	IN OUT PULONG StackReserved,
+	IN OUT PULONG StackCommit,
+	IN PVOID StartAddress,
+	IN PVOID StartParameter,
+	OUT PHANDLE ThreadHandle,
+	OUT PCLIENT_ID ClientID
+);
+
 bool IsNullOrEmpty( const char* str );
+bool bIsProcessRunning( char *szExeName );
 DWORD GetProcessId( char *szExeName );
 BOOL CreateRemoteThreadInjection( DWORD dwProcId, const char *szDllName );
 BOOL NtCreateThreadExInjection( DWORD dwProcId, const char *szDllName );
 BOOL WindowsHookInjection( DWORD dwProcId, const char *szDllName );
 BOOL APCInjection( DWORD dwProcId, const char *szDllName );
+BOOL RtlCreateUserThreadInjection( DWORD dwProcId, const char *szDllName );

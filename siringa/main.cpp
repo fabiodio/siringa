@@ -78,11 +78,14 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 		bAuto = 1;
 
 		SetWindowTextA( hDlg, APP_NAME );
-		SetDlgItemText( hDlg, IDC_EXE, "example.exe" );
-		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"CreateRemoteThread method" );
-		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"NtCreateThreadEx method" );
-		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"Windows Hooks method" );
-		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"APC method" );
+		SetDlgItemText( hDlg, IDC_EXE, "notepad++.exe" );
+		SendMessage( hDlg, WM_SETICON, ICON_BIG, ( LPARAM )LoadIcon( g_hInstance, MAKEINTRESOURCE( IDI_ICON ) ) );
+		SendMessage( hDlg, WM_SETICON, ICON_SMALL, ( LPARAM )LoadIcon( g_hInstance, MAKEINTRESOURCE( IDI_ICON ) ) );
+		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"CreateRemoteThread" );
+		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"NtCreateThreadEx" );
+		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"RtlCreateUserThread" );
+		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"SetWindowsHookEx" );
+		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"QueueUserAPC" );
 		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_SETCURSEL, 0, NULL );
 		SendMessage( GetDlgItem( hDlg, IDC_AUTO ), BM_SETCHECK, bAuto, NULL );
 
@@ -130,8 +133,56 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 			{
 				LRESULT iDll = SendMessage( GetDlgItem( hDlg, IDC_LISTDLL ), LB_GETCURSEL, NULL, NULL );
 				SendMessage( GetDlgItem( hDlg, IDC_LISTDLL ), LB_DELETESTRING, iDll, NULL );
+
+				int iBuffer[MAX_DLLS];
+				memset( iBuffer, 0, MAX_DLLS );
+				memset( szDll, 0, sizeof( szDll ) );
+
+				HWND hListBox = GetDlgItem( hDlg, IDC_LISTDLL );
+				LRESULT itemsInBuffer = SendMessage( hListBox, LB_GETSELITEMS, MAX_DLLS, ( LPARAM )iBuffer );
+			
+				for( int i = 0; i < ( int )itemsInBuffer; i++ )
+				{
+					SendMessage( hListBox, LB_GETTEXT, iBuffer[i], ( LPARAM )szDll[i] );
+				}
 			}
 			break;
+		case IDC_INJECT:
+			{
+				if( bIsProcessRunning( szExe ) && !IsNullOrEmpty( szDll[0] ) )
+				{
+					for( int i = 0; i < MAX_DLLS; i++ )
+					{
+						if( i == ( MAX_DLLS - 1 ) )
+						{
+							Sleep( 500 );
+							exit(0);
+						}
+
+						if( !strlen( szDll[i] ) )
+							continue;
+
+						switch( iMethod )
+						{
+						case 0:
+							CreateRemoteThreadInjection( GetProcessId( szExe ), szDll[i] );
+							break;
+						case 1:
+							NtCreateThreadExInjection( GetProcessId( szExe ), szDll[i] );
+							break;
+						case 2:
+							RtlCreateUserThreadInjection( GetProcessId( szExe ), szDll[i] );
+							break;
+						case 3:
+							WindowsHookInjection( GetProcessId( szExe ), szDll[i] );
+							break;
+						case 4:
+							APCInjection( GetProcessId( szExe ), szDll[i] );
+							break;
+						}
+					}
+				}
+			}
 		}
 		switch( LOWORD( wParam ) )
 		{
