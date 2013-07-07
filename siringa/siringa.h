@@ -1,6 +1,9 @@
 /*
  * Siringa by Fab1o (fabiodio)
  * Dll injection tool
+ * TODO: 
+ * Multiple injection methods (CreateRemoteThread & WriteProcessMemory(OK), The CreateRemoteThread & LoadLibrary Technique, Manual Mapping, etc.);
+ * Game profiles.
  */
 
 #pragma once
