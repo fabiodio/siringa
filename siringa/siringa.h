@@ -1,13 +1,3 @@
-<<<<<<< HEAD
-/*
- * Siringa by Fab1o (fabiodio)
- * Dll injection tool
- * TODO: 
- * Multiple injection methods (CreateRemoteThread & WriteProcessMemory(OK), The CreateRemoteThread & LoadLibrary Technique, Manual Mapping, etc.);
- * Game profiles.
- */
-
-=======
 /****************************************************
  *	Siringa
  *	author:	Fab1o (fabiodio)
@@ -20,7 +10,6 @@
  *	TODO:	Game profiles, start-up injection,
  *			start-up injection w/ command.
  ***************************************************/
->>>>>>> Update
 #pragma once
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #pragma comment(lib, "psapi.lib")
@@ -82,9 +71,6 @@ typedef NTSTATUS (WINAPI *LPFUN_NtCreateThreadEx)(
 bool IsNullOrEmpty( const char* str );
 DWORD GetProcessId( char *szExeName );
 BOOL CreateRemoteThreadInjection( DWORD dwProcId, const char *szDllName );
-<<<<<<< HEAD
-=======
 BOOL NtCreateThreadExInjection( DWORD dwProcId, const char *szDllName );
 BOOL WindowsHookInjection( DWORD dwProcId, const char *szDllName );
 BOOL APCInjection( DWORD dwProcId, const char *szDllName );
->>>>>>> Update
