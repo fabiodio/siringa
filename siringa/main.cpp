@@ -3,10 +3,13 @@
 BOOL CALLBACK MainDlgProc( HWND, UINT, WPARAM, LPARAM );
 
 HINSTANCE g_hInstance = NULL;
+
 HANDLE hInjThread = NULL;
 
 char szExe[MAX_PATH];
 char szDll[MAX_DLLS][MAX_PATH];
+int iMethod;
+int bAuto;
 
 char *trim( char *str )
 {
@@ -23,11 +26,6 @@ char *trim( char *str )
 	*( end + 1 ) = 0;
 
 	return str;
-}
-
-bool IsNullOrEmpty( const char* str )
-{
-	return (str == 0) || (*str == '\0');
 }
 
 bool GetDllDialog( char * szDll )
@@ -62,7 +60,7 @@ int __stdcall WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmd
 
 	if( ( hInjThread = CreateThread( NULL, 0, ( LPTHREAD_START_ROUTINE )dwInjThread, 0, 0, 0 ) ) == NULL )
 	{
-		MessageBox( GetForegroundWindow(), "Failed to create injection thread! (aborted)!", APP_NAME, MB_OK | MB_ICONERROR );
+		MessageBox( GetForegroundWindow(), "Failed to create injection thread!", APP_NAME, MB_OK | MB_ICONERROR );
 		return false;
 	}
 
@@ -76,10 +74,19 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 	switch( message )
 	{
 	case WM_INITDIALOG:
-		SetWindowTextA( hDlg, APP_NAME );
-		SetDlgItemText( hDlg, IDC_EXE, "*.exe" );
-		return true;
+		iMethod = 0;
+		bAuto = 1;
 
+		SetWindowTextA( hDlg, APP_NAME );
+		SetDlgItemText( hDlg, IDC_EXE, "example.exe" );
+		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"CreateRemoteThread method" );
+		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"NtCreateThreadEx method" );
+		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"Windows Hooks method" );
+		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"APC method" );
+		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_SETCURSEL, 0, NULL );
+		SendMessage( GetDlgItem( hDlg, IDC_AUTO ), BM_SETCHECK, bAuto, NULL );
+
+		return true;
 	case WM_COMMAND:
 		switch( wParam )
 		{
@@ -92,6 +99,7 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 					break;
 				SendMessage( GetDlgItem( hDlg, IDC_LISTEXE ), LB_ADDSTRING, NULL, ( LPARAM )trim( fileExe ) );
 				SetDlgItemText( hDlg, IDC_EXE, NULL );
+				memset( fileExe, 0, sizeof( fileExe ) );
 			}
 			break;
 		case IDC_DELEXE:
@@ -103,9 +111,8 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 			break;
 		case IDC_ADDDLL:
 			{
-				char filePath[MAX_PATH], fileDll[MAX_PATH];
+				char filePath[MAX_PATH];
 				memset( filePath, 0, sizeof( filePath ) );
-				memset( fileDll, 0, sizeof( fileDll ) );
 				GetDllDialog( filePath );
 				/* file name
 				char *ptr = filePath;
@@ -113,7 +120,10 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 				while( *ptr != '\\' ) *ptr--; *ptr++;
 				strcpy_s( fileDll, ptr );
 				*/
+				if( IsNullOrEmpty( filePath ) )
+					break;
 				SendMessage( GetDlgItem( hDlg, IDC_LISTDLL ), LB_ADDSTRING, NULL, ( LPARAM )filePath );
+				memset( filePath, 0, sizeof( filePath ) );
 			}
 			break;
 		case IDC_DELDLL:
@@ -154,6 +164,20 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 				}
 			}
 			break;
+		case IDC_METHOD:
+			{
+				if( HIWORD( wParam ) == CBN_SELCHANGE )
+				{
+					iMethod = SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_GETCURSEL, 0, 0 );
+				}
+			}
+		case IDC_AUTO:
+			{
+				if( HIWORD( wParam ) == BN_CLICKED )
+				{
+					bAuto = SendMessage( GetDlgItem( hDlg, IDC_AUTO ), BM_GETCHECK, 0, 0 );
+				}
+			}
 		}
 		return true;
 
