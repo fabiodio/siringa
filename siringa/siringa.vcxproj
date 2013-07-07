@@ -75,8 +75,6 @@
     <Library Include="detours\detours.lib" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="..\..\..\..\Desktop\siringa.ico" />
-    <None Include="icon1.ico" />
     <None Include="siringa.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
