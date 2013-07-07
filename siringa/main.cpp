@@ -5,8 +5,30 @@ BOOL CALLBACK MainDlgProc( HWND, UINT, WPARAM, LPARAM );
 HINSTANCE g_hInstance = NULL;
 HANDLE hInjThread = NULL;
 
-char szExe[ MAX_PATH ];
-char szDll[ MAX_DLLS ][ MAX_PATH ];
+char szExe[MAX_PATH];
+char szDll[MAX_DLLS][MAX_PATH];
+
+char *trim( char *str )
+{
+	char *end;
+
+	while( isspace( *str ) ) str++;
+
+	if(*str == 0)
+	return str;
+
+	end = str + strlen( str ) - 1;
+	while( end > str && isspace( *end ) ) end--;
+
+	*( end + 1 ) = 0;
+
+	return str;
+}
+
+bool IsNullOrEmpty( const char* str )
+{
+	return (str == 0) || (*str == '\0');
+}
 
 bool GetDllDialog( char * szDll )
 {
@@ -27,20 +49,20 @@ bool GetDllDialog( char * szDll )
 bool bFileExists( const char *fileName )
 {
 	WIN32_FIND_DATA findData;
-	HANDLE handle = FindFirstFile(fileName, &findData );
+	HANDLE handle = FindFirstFile( fileName, &findData );
 	return ( handle != INVALID_HANDLE_VALUE );
 }
 
-int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int __stdcall WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
 {
-	memset(szExe, 0, sizeof(szExe));
-	memset(szDll, 0, sizeof(szDll));
+	memset( szExe, 0, sizeof( szExe ) );
+	memset( szDll, 0, sizeof( szDll ) );
 
 	g_hInstance = hInstance;
 
 	if( ( hInjThread = CreateThread( NULL, 0, ( LPTHREAD_START_ROUTINE )dwInjThread, 0, 0, 0 ) ) == NULL )
 	{
-		MessageBox( GetForegroundWindow(), "Failed to create injection thread! (aborted)!", APP_NAME, MB_OK|MB_ICONERROR );
+		MessageBox( GetForegroundWindow(), "Failed to create injection thread! (aborted)!", APP_NAME, MB_OK | MB_ICONERROR );
 		return false;
 	}
 
@@ -55,44 +77,80 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 	{
 	case WM_INITDIALOG:
 		SetWindowTextA( hDlg, APP_NAME );
+		SetDlgItemText( hDlg, IDC_EXE, "*.exe" );
 		return true;
 
 	case WM_COMMAND:
 		switch( wParam )
 		{
+		case IDC_ADDEXE:
+			{
+				char fileExe[MAX_PATH];
+				memset( fileExe, 0, sizeof( fileExe ) );
+				GetDlgItemText( hDlg, IDC_EXE, fileExe, MAX_PATH );
+				if( IsNullOrEmpty( trim( fileExe ) ) )
+					break;
+				SendMessage( GetDlgItem( hDlg, IDC_LISTEXE ), LB_ADDSTRING, NULL, ( LPARAM )trim( fileExe ) );
+				SetDlgItemText( hDlg, IDC_EXE, NULL );
+			}
+			break;
+		case IDC_DELEXE:
+			{
+				LRESULT iExe = SendMessage( GetDlgItem( hDlg, IDC_LISTEXE ), LB_GETCURSEL, NULL, NULL );
+				SendMessage( GetDlgItem( hDlg, IDC_LISTEXE ), LB_DELETESTRING, iExe, NULL );
+				memset( szExe, 0, sizeof( szExe ) );
+			}
+			break;
 		case IDC_ADDDLL:
-			char filePath[ MAX_PATH ], fileDll[ MAX_PATH ];
-			memset( filePath, 0, sizeof( filePath ) );
-			memset( fileDll, 0, sizeof( fileDll ) );
-			GetDllDialog( filePath );
-			/* file name
-			char *ptr = filePath;
-			while( *ptr ) *ptr++;
-			while( *ptr != '\\' ) *ptr--; *ptr++;
-			strcpy_s( fileDll, ptr );
-			*/
-			SendMessage( GetDlgItem( hDlg, IDC_LISTDLL ), LB_ADDSTRING, NULL, ( LPARAM )filePath );
+			{
+				char filePath[MAX_PATH], fileDll[MAX_PATH];
+				memset( filePath, 0, sizeof( filePath ) );
+				memset( fileDll, 0, sizeof( fileDll ) );
+				GetDllDialog( filePath );
+				/* file name
+				char *ptr = filePath;
+				while( *ptr ) *ptr++;
+				while( *ptr != '\\' ) *ptr--; *ptr++;
+				strcpy_s( fileDll, ptr );
+				*/
+				SendMessage( GetDlgItem( hDlg, IDC_LISTDLL ), LB_ADDSTRING, NULL, ( LPARAM )filePath );
+			}
 			break;
 		case IDC_DELDLL:
-			LRESULT selectedItm = SendMessage( GetDlgItem( hDlg, IDC_LISTDLL ), LB_GETCURSEL, NULL, NULL );
-			SendMessage( GetDlgItem( hDlg, IDC_LISTDLL ), LB_DELETESTRING, selectedItm, NULL );
+			{
+				LRESULT iDll = SendMessage( GetDlgItem( hDlg, IDC_LISTDLL ), LB_GETCURSEL, NULL, NULL );
+				SendMessage( GetDlgItem( hDlg, IDC_LISTDLL ), LB_DELETESTRING, iDll, NULL );
+			}
 			break;
 		}
 		switch( LOWORD( wParam ) )
 		{
 		case IDC_LISTDLL:
-			if( HIWORD( wParam ) == LBN_SELCHANGE )
 			{
-				int iBuffer[ MAX_DLLS ];
-				memset( iBuffer, 0, MAX_DLLS );
-				memset( szDll, 0, sizeof( szDll ) );
-
-				HWND hListBox = GetDlgItem( hDlg, IDC_LISTDLL );
-				LRESULT itemsInBuffer = SendMessage( hListBox, LB_GETSELITEMS, MAX_DLLS, ( LPARAM )iBuffer );
-			
-				for( int i = 0; i < ( int )itemsInBuffer; i++ )
+				if( HIWORD( wParam ) == LBN_SELCHANGE )
 				{
-					SendMessage( hListBox, LB_GETTEXT, iBuffer[ i ], ( LPARAM )szDll[ i ] );
+					int iBuffer[MAX_DLLS];
+					memset( iBuffer, 0, MAX_DLLS );
+					memset( szDll, 0, sizeof( szDll ) );
+
+					HWND hListBox = GetDlgItem( hDlg, IDC_LISTDLL );
+					LRESULT itemsInBuffer = SendMessage( hListBox, LB_GETSELITEMS, MAX_DLLS, ( LPARAM )iBuffer );
+			
+					for( int i = 0; i < ( int )itemsInBuffer; i++ )
+					{
+						SendMessage( hListBox, LB_GETTEXT, iBuffer[i], ( LPARAM )szDll[i] );
+					}
+				}
+			}
+			break;
+		case IDC_LISTEXE:
+			{
+				if( HIWORD( wParam ) == LBN_SELCHANGE )
+				{
+					HWND hListBox = GetDlgItem( hDlg, IDC_LISTEXE );
+					int iItem = SendMessage( hListBox, LB_GETCURSEL, 0, 0 );
+
+					SendMessage( hListBox, LB_GETTEXT, iItem, ( LPARAM )szExe );
 				}
 			}
 			break;

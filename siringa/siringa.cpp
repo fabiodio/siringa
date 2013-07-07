@@ -1,6 +1,6 @@
 #include "siringa.h"
 
-bool bIsProcessRunning(char *szExeName)
+bool bIsProcessRunning( char *szExeName )
 {
 	if ( szExeName == NULL )
 		return false;
@@ -11,34 +11,34 @@ bool bIsProcessRunning(char *szExeName)
 	HMODULE hMod = NULL;
 	UINT i = 0;
 
-	memcpy(szProcessName2, szExeName, sizeof(szProcessName2));
+	memcpy( szProcessName2, szExeName, sizeof( szProcessName2 ) );
 
-    if(!EnumProcesses(aProcesses, sizeof(aProcesses), &cb))
+    if( !EnumProcesses( aProcesses, sizeof( aProcesses ), &cb ) )
         return FALSE;
 
-    cProcesses = cb / sizeof(DWORD);
+    cProcesses = cb / sizeof( DWORD );
 
-    for(i = 0; i < cProcesses; i++)
+    for( i = 0; i < cProcesses; i++ )
 	{
-		hProcess = OpenProcess(PROCESS_ALL_ACCESS, FALSE, aProcesses[i]);
+		hProcess = OpenProcess( PROCESS_ALL_ACCESS, FALSE, aProcesses[i] );
 
-		if(hProcess)
+		if( hProcess )
 		{
-			if(EnumProcessModules(hProcess, &hMod, sizeof(hMod), &cb))
+			if( EnumProcessModules( hProcess, &hMod, sizeof( hMod ), &cb ) )
 			{
-				GetModuleBaseName(hProcess, hMod, szProcessName, sizeof(szProcessName)/sizeof(TCHAR));
+				GetModuleBaseName( hProcess, hMod, szProcessName, sizeof( szProcessName ) / sizeof( TCHAR ) );
 			}
 
-			_strlwr_s(szProcessName);
-			_strlwr_s(szProcessName2);
+			_strlwr_s( szProcessName );
+			_strlwr_s( szProcessName2 );
 			
-			if(strcmp(szProcessName, szProcessName2) == 0)
+			if( strcmp( szProcessName, szProcessName2 ) == 0 )
 			{
 				return true;
 			}
 		}
 
-		CloseHandle(hProcess);
+		CloseHandle( hProcess );
 	}
 
 	return false;
@@ -98,15 +98,14 @@ DWORD dwInjThread()
 {
 	while(1)
 	{
-		GetDlgItemText( GetForegroundWindow(), IDC_EXE, szExe, MAX_PATH );
 		if( bIsProcessRunning( szExe ) )
 		{
 			for( int i = 0; i < MAX_DLLS; i++ )
 			{
-				if( !strlen( szDll[ i ] ) )
+				if( !strlen( szDll[i] ) )
 					continue;
 
-				CreateRemoteThreadInjection( GetProcessId( szExe ), szDll[ i ] );
+				CreateRemoteThreadInjection( GetProcessId( szExe ), szDll[i] );
 			}
 
 			Sleep( 500 );
