@@ -1,8 +1,10 @@
 #include "siringa.h"
 
 BOOL CALLBACK MainDlgProc( HWND, UINT, WPARAM, LPARAM );
+BOOL CALLBACK AboutDlgProc( HWND, UINT, WPARAM, LPARAM );
 
 HINSTANCE g_hInstance = NULL;
+HWND g_hWnd = NULL;
 
 HANDLE hInjThread = NULL;
 
@@ -53,10 +55,9 @@ bool bFileExists( const char *fileName )
 
 int __stdcall WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow )
 {
+	g_hInstance = hInstance;
 	memset( szExe, 0, sizeof( szExe ) );
 	memset( szDll, 0, sizeof( szDll ) );
-
-	g_hInstance = hInstance;
 
 	if( ( hInjThread = CreateThread( NULL, 0, ( LPTHREAD_START_ROUTINE )dwInjThread, 0, 0, 0 ) ) == NULL )
 	{
@@ -64,13 +65,15 @@ int __stdcall WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmd
 		return false;
 	}
 
-	DialogBoxA( NULL, MAKEINTRESOURCEA( IDD_SIRINGA ), NULL, MainDlgProc );
+	DialogBox( NULL, MAKEINTRESOURCEA( IDD_SIRINGA ), NULL, MainDlgProc );
 
 	return 0;
 }
 
 BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
+	g_hWnd = hDlg;
+
 	switch( message )
 	{
 	case WM_INITDIALOG:
@@ -93,6 +96,9 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 	case WM_COMMAND:
 		switch( wParam )
 		{
+		case IDC_ABOUT:
+			DialogBoxA( NULL, MAKEINTRESOURCEA( IDD_ABOUT ), NULL, AboutDlgProc );
+			break;
 		case IDC_ADDEXE:
 			{
 				char fileExe[MAX_PATH];
@@ -208,6 +214,7 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 			{
 				if( HIWORD( wParam ) == LBN_SELCHANGE )
 				{
+					memset( szExe, 0, sizeof( szExe ) );
 					HWND hListBox = GetDlgItem( hDlg, IDC_LISTEXE );
 					int iItem = SendMessage( hListBox, LB_GETCURSEL, 0, 0 );
 
@@ -233,6 +240,34 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 		return true;
 
 	case WM_CLOSE:
+		CloseHandle( hInjThread );
+		EndDialog( hDlg, 0 );
+		exit( 0 );
+		return true;
+	}
+	return false;
+}
+
+HANDLE hBitmap = NULL;
+
+BOOL CALLBACK AboutDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
+{
+	switch( message )
+	{
+	case WM_INITDIALOG:
+		EnableWindow( g_hWnd, false );                  
+		return true;
+
+	case WM_COMMAND:
+		switch( LOWORD( wParam ) )
+		{
+		case IDOK:
+			EnableWindow( g_hWnd, true );
+			DestroyWindow( hDlg );
+			return true;
+		}
+	case WM_CLOSE:
+		EnableWindow( g_hWnd, true );
 		EndDialog( hDlg, 0 );
 		return true;
 	}

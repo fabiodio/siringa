@@ -1,18 +1,19 @@
 /****************************************************
  *	Siringa
- *	author:	Fab1o (fabiodio)
- *	infos:	Dll injection tool
- *	notes:	It supports 4 injection methods:
- *			CreateRemoteThread, NtCreateThreadEx,
- *			RtlCreateUserThread, SetWindowsHook, 
- *			QueueUserAPC.
- *			Auto/manual-injection, multiple .dll
- *			injection.
- *	thanks:	undocumented.ntinternals.net - for the
- *			structs ofundocumented  native funcs;
- *			Sinner - application inspiration.
- *	TODO:	Game profiles, spawn-injection,
- *			spawn-injection w/ command.
+ *	version:	1.0
+ *	author:		Fab1o (fabiodio)
+ *	infos:		Dll injection tool
+ *	notes:		It supports 5 injection methods:
+ *				CreateRemoteThread, NtCreateThreadEx,
+ *				RtlCreateUserThread, SetWindowsHook, 
+ *				QueueUserAPC.
+ *				Auto/manual-injection, multiple .dll
+ *				injection.
+ *	thanks:		undocumented.ntinternals.net - for the
+ *				structs ofundocumented  native funcs;
+ *				Sinner - application inspiration.
+ *	TODO:		Game profiles, spawn-injection,
+ *				spawn-injection w/ command.
  ***************************************************/
 #pragma once
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
@@ -54,6 +55,12 @@ struct NtCreateThreadExBuffer
 	ULONG Unknown8;
 };
 
+typedef struct _CLIENT_ID
+{
+	PVOID UniqueProcess;
+	PVOID UniqueThread;
+} CLIENT_ID, *PCLIENT_ID;
+
 typedef NTSTATUS (WINAPI *LPFUN_NtCreateThreadEx)(
 	OUT PHANDLE hThread,
 	IN ACCESS_MASK DesiredAccess,
@@ -67,12 +74,6 @@ typedef NTSTATUS (WINAPI *LPFUN_NtCreateThreadEx)(
 	IN ULONG SizeOfStackReserve,
 	OUT LPVOID lpBytesBuffer
 );
-
-typedef struct _CLIENT_ID
-{
-     PVOID UniqueProcess;
-     PVOID UniqueThread;
-} CLIENT_ID, *PCLIENT_ID;
 
 typedef NTSTATUS ( WINAPI *LPFUN_RtlCreateUserThread )(
 	IN HANDLE ProcessHandle,

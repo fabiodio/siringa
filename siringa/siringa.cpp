@@ -123,7 +123,11 @@ BOOL WindowsHookInjection( DWORD dwProcId, const char *szDllName )
 		return false;
 
 	HMODULE hDll = LoadLibrary( szDllName );
-	HOOKPROC procAddress = ( HOOKPROC )GetProcAddress( hDll, "FuncName" );
+	HOOKPROC procAddress = ( HOOKPROC )GetProcAddress( hDll, "FuncName" ); // TODO: function name costumizable
+	if( !procAddress )
+	{
+		// Function not found
+	}
 
 	SetWindowsHookEx( WH_CBT, procAddress, hDll, dwProcId );
 
@@ -201,10 +205,10 @@ DWORD __sprayThreads(DWORD m_dwPID, DWORD m_dwLoadLibAddr, DWORD m_dwPathAddr) {
 }
 
 UINT WINAPI MyThread(){ // Thanks to betamonkey
-    HANDLE m_hEvent = CreateEvent(NULL, FALSE, FALSE, "APC");
+    HANDLE m_hEvent = CreateEvent( NULL, FALSE, FALSE, "APC" );
 
     while(1)
-        WaitForSingleObjectEx(m_hEvent, INFINITE, TRUE);
+        WaitForSingleObjectEx( m_hEvent, INFINITE, TRUE );
 
     CloseHandle( m_hEvent );
 
@@ -225,10 +229,10 @@ BOOL APCInjection( DWORD dwProcId, const char *szDllName ) // Thanks to betamonk
 			__sprayThreads( dwProcId, m_dwLoadLibraryW, ( ULONG_PTR )m_dwPathAddr );
         }
 		else
-			Popup( "Error!" );
+			Popup( "CreateThread Failed [%d][%08x]", GetLastError(), status );
 	}
 	else
-		Popup( "Error!" );
+		Popup( "Could not find stub" );
 
 	return true;
 }
