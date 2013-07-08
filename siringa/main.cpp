@@ -81,7 +81,7 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 		bAuto = 1;
 
 		SetWindowTextA( hDlg, APP_NAME );
-		SetDlgItemText( hDlg, IDC_EXE, "notepad++.exe" );
+		SetDlgItemText( hDlg, IDC_EXE, "example.exe" );
 		SendMessage( hDlg, WM_SETICON, ICON_BIG, ( LPARAM )LoadIcon( g_hInstance, MAKEINTRESOURCE( IDI_ICON ) ) );
 		SendMessage( hDlg, WM_SETICON, ICON_SMALL, ( LPARAM )LoadIcon( g_hInstance, MAKEINTRESOURCE( IDI_ICON ) ) );
 		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"CreateRemoteThread" );
