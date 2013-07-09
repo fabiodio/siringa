@@ -1,6 +1,9 @@
 #include "siringa.h"
 
+using namespace std;
+
 BOOL CALLBACK MainDlgProc( HWND, UINT, WPARAM, LPARAM );
+BOOL CALLBACK FuncDlgProc( HWND, UINT, WPARAM, LPARAM );
 BOOL CALLBACK AboutDlgProc( HWND, UINT, WPARAM, LPARAM );
 
 HINSTANCE g_hInstance = NULL;
@@ -10,8 +13,10 @@ HANDLE hInjThread = NULL;
 
 char szExe[MAX_PATH];
 char szDll[MAX_DLLS][MAX_PATH];
+char szFuncName[MAX_PATH];
 int iMethod;
 int bAuto;
+int bQuit;
 
 char *trim( char *str )
 {
@@ -79,6 +84,7 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 	case WM_INITDIALOG:
 		iMethod = 0;
 		bAuto = 1;
+		bQuit = 1;
 
 		SetWindowTextA( hDlg, APP_NAME );
 		SetDlgItemText( hDlg, IDC_EXE, "example.exe" );
@@ -91,6 +97,9 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_ADDSTRING, NULL, ( LPARAM )"QueueUserAPC" );
 		SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_SETCURSEL, 0, NULL );
 		SendMessage( GetDlgItem( hDlg, IDC_AUTO ), BM_SETCHECK, bAuto, NULL );
+		SendMessage( GetDlgItem( hDlg, IDC_QUIT ), BM_SETCHECK, bQuit, NULL );
+		EnableWindow( GetDlgItem( hDlg, IDC_QUIT ), false );
+		EnableWindow( GetDlgItem( hDlg, IDC_INJECT ), false );
 
 		return true;
 	case WM_COMMAND:
@@ -146,7 +155,7 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 
 				HWND hListBox = GetDlgItem( hDlg, IDC_LISTDLL );
 				LRESULT itemsInBuffer = SendMessage( hListBox, LB_GETSELITEMS, MAX_DLLS, ( LPARAM )iBuffer );
-			
+				
 				for( int i = 0; i < ( int )itemsInBuffer; i++ )
 				{
 					SendMessage( hListBox, LB_GETTEXT, iBuffer[i], ( LPARAM )szDll[i] );
@@ -162,7 +171,10 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 						if( i == ( MAX_DLLS - 1 ) )
 						{
 							Sleep( 500 );
-							exit(0);
+							if( bQuit )
+								exit(0);
+							else
+								return true;
 						}
 
 						if( !strlen( szDll[i] ) )
@@ -227,15 +239,41 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 				if( HIWORD( wParam ) == CBN_SELCHANGE )
 				{
 					iMethod = SendMessage( GetDlgItem( hDlg, IDC_METHOD ), CB_GETCURSEL, 0, 0 );
+					if( iMethod == 3 )
+					{
+						DialogBoxA( NULL, MAKEINTRESOURCEA( IDD_FUNC ), NULL, FuncDlgProc );
+					}
 				}
 			}
+			break;
 		case IDC_AUTO:
 			{
 				if( HIWORD( wParam ) == BN_CLICKED )
 				{
-					bAuto = SendMessage( GetDlgItem( hDlg, IDC_AUTO ), BM_GETCHECK, 0, 0 );
+					bAuto = !bAuto;
+					if( !bAuto )
+					{
+						EnableWindow( GetDlgItem( hDlg, IDC_QUIT ), true );
+						EnableWindow( GetDlgItem( hDlg, IDC_INJECT ), true );
+					}
+					else
+					{
+						SendMessage( GetDlgItem( hDlg, IDC_QUIT ), BM_SETCHECK, 1, NULL );
+						bQuit = 1;
+						EnableWindow( GetDlgItem( hDlg, IDC_QUIT ), false );
+						EnableWindow( GetDlgItem( hDlg, IDC_INJECT ), false );
+					}
 				}
 			}
+			break;
+		case IDC_QUIT:
+			{
+				if( HIWORD( wParam ) == BN_CLICKED )
+				{
+					bQuit = !bQuit;
+				}
+			}
+			break;
 		}
 		return true;
 
@@ -248,14 +286,79 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 	return false;
 }
 
-HANDLE hBitmap = NULL;
+vector<string> sFuncs;
+LRESULT iFunc;
+
+BOOL CALLBACK FuncDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
+{
+	int iBuffer[MAX_DLLS];
+	HWND hListBox = GetDlgItem( g_hWnd, IDC_LISTDLL );
+	LRESULT dllsInBuffer = SendMessage( hListBox, LB_GETSELITEMS, MAX_DLLS, ( LPARAM )iBuffer );
+	LRESULT iDll;
+
+	switch( message )
+	{
+	case WM_INITDIALOG:
+		{
+			SendMessage( hDlg, WM_SETICON, ICON_BIG, ( LPARAM )LoadIcon( g_hInstance, MAKEINTRESOURCE( IDI_ICON ) ) );
+			SendMessage( hDlg, WM_SETICON, ICON_SMALL, ( LPARAM )LoadIcon( g_hInstance, MAKEINTRESOURCE( IDI_ICON ) ) );
+			EnableWindow( g_hWnd, false );
+			memset( iBuffer, 0, MAX_DLLS );
+
+			for( int i = 0; i < ( int )dllsInBuffer; i++ )
+			{
+				if( IsNullOrEmpty( szDll[i] ) )
+					break;
+				SendMessage( GetDlgItem( hDlg, IDC_SDLLS ), LB_ADDSTRING, NULL, ( LPARAM )szDll[i] );
+			}
+		}
+		return true;
+
+	case WM_COMMAND:
+		switch( LOWORD( wParam ) )
+		{
+		case IDC_FOK:
+			EnableWindow( g_hWnd, true );
+			EndDialog( hDlg, 0 );
+			break;
+		case IDC_SDLLS:
+			if( HIWORD( wParam ) == LBN_SELCHANGE )
+			{
+				SendMessage( GetDlgItem( hDlg, IDC_FUNCS ), LB_RESETCONTENT, NULL, NULL );
+				iDll = SendMessage( GetDlgItem( hDlg, IDC_SDLLS ), LB_GETCURSEL, NULL, NULL );
+
+				GetDllFunctions( szDll[iDll], sFuncs );
+
+				for( unsigned int i = 0; i < sFuncs.size(); i++ )
+				{
+					SendMessage( GetDlgItem( hDlg, IDC_FUNCS ), LB_ADDSTRING, NULL, ( LPARAM )sFuncs[i].c_str() );
+				}
+			}
+			break;
+		case IDC_FUNCS:
+			if( HIWORD( wParam ) == LBN_SELCHANGE )
+			{
+				memset( szFuncName, 0, sizeof( szFuncName ) );
+				iFunc = SendMessage( GetDlgItem( hDlg, IDC_FUNCS ), LB_GETCURSEL, NULL, NULL );
+				
+				sFuncs[iFunc].copy( szFuncName, sFuncs[iFunc].length(), 0 );
+			}
+		}
+		break;
+	case WM_CLOSE:
+		EnableWindow( g_hWnd, true );
+		EndDialog( hDlg, 0 );
+		return true;
+	}
+	return false;
+}
 
 BOOL CALLBACK AboutDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam )
 {
 	switch( message )
 	{
 	case WM_INITDIALOG:
-		EnableWindow( g_hWnd, false );                  
+		EnableWindow( g_hWnd, false );
 		return true;
 
 	case WM_COMMAND:
@@ -263,9 +366,10 @@ BOOL CALLBACK AboutDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
 		{
 		case IDOK:
 			EnableWindow( g_hWnd, true );
-			DestroyWindow( hDlg );
-			return true;
+			EndDialog( hDlg, 0 );
+			break;
 		}
+		break;
 	case WM_CLOSE:
 		EnableWindow( g_hWnd, true );
 		EndDialog( hDlg, 0 );

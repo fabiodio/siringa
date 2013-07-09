@@ -18,12 +18,17 @@
 #pragma once
 #pragma comment(linker,"/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")
 #pragma comment(lib, "psapi.lib")
+#pragma comment(lib, "imagehlp.lib")
 #pragma comment(lib, "winmm.lib")
 
 #include <windows.h>
 #include <stdio.h>
+#include <iostream>
+#include <string>
+#include <vector>
 #include <tlhelp32.h>
 #include <Psapi.h>
+#include <imagehlp.h>
 #include <algorithm> 
 #include <functional> 
 #include <cctype>
@@ -39,8 +44,11 @@
 extern DWORD dwInjThread();
 extern char szExe[MAX_PATH];
 extern char szDll[MAX_DLLS][MAX_PATH];
+extern char szFuncName[MAX_PATH];
 extern int iMethod;
 extern int bAuto;
+
+using namespace std; //xd
 
 struct NtCreateThreadExBuffer
 {
@@ -91,6 +99,7 @@ typedef NTSTATUS ( WINAPI *LPFUN_RtlCreateUserThread )(
 bool IsNullOrEmpty( const char* str );
 bool bIsProcessRunning( char *szExeName );
 DWORD GetProcessId( char *szExeName );
+void GetDllFunctions( const char *szDllName, vector<string>& sList );
 BOOL CreateRemoteThreadInjection( DWORD dwProcId, const char *szDllName );
 BOOL NtCreateThreadExInjection( DWORD dwProcId, const char *szDllName );
 BOOL WindowsHookInjection( DWORD dwProcId, const char *szDllName );

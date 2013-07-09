@@ -81,6 +81,47 @@ DWORD GetProcessId( char *szExeName )
 
 	return dwRet;
 }
+
+DWORD GetThreadIdFromProcId( DWORD dwProcId )
+{
+	LPVOID lpThreadId;
+	DWORD dwThreadId;
+
+	_asm
+	{
+		mov eax, fs:[18h]
+		add eax, 36
+		mov [lpThreadId], eax
+	}
+
+	HANDLE hProc = OpenProcess( PROCESS_VM_READ, FALSE, dwProcId );
+	ReadProcessMemory( hProc, lpThreadId, &dwThreadId, sizeof( dwThreadId ), NULL );
+
+	return dwThreadId;
+}
+
+void GetDllFunctions( const char *szDllName, vector<string>& sList )
+{
+	DWORD *dwNameRVAs(0);
+	unsigned long lDirSize;
+	PIMAGE_EXPORT_DIRECTORY imageExportDirectory;
+	LOADED_IMAGE loadedImage;
+	string sName;
+	if( MapAndLoad( szDllName, NULL, &loadedImage, TRUE, TRUE ) )
+	{
+		imageExportDirectory =  ( PIMAGE_EXPORT_DIRECTORY )ImageDirectoryEntryToData( loadedImage.MappedAddress, false, IMAGE_DIRECTORY_ENTRY_EXPORT, &lDirSize );
+		if( imageExportDirectory != NULL )
+		{
+			dwNameRVAs = ( PDWORD )ImageRvaToVa( loadedImage.FileHeader, loadedImage.MappedAddress, imageExportDirectory->AddressOfNames, NULL );
+			for( unsigned int i = 0; i < imageExportDirectory->NumberOfNames; i++ )
+			{
+				sName = ( char * )ImageRvaToVa( loadedImage.FileHeader, loadedImage.MappedAddress, dwNameRVAs[i], NULL );
+				sList.push_back( sName );
+			}
+			UnMapAndLoad( &loadedImage );
+		}
+	}
+}
 /*	old
 BOOL CreateRemoteThreadInjection( DWORD dwProcId, const char *szDllName )
 {
@@ -119,17 +160,25 @@ BOOL CreateRemoteThreadInjection( DWORD dwProcId, const char *szDllName )
 
 BOOL WindowsHookInjection( DWORD dwProcId, const char *szDllName )
 {
+	vector<string> sFunc;
+
 	if(!dwProcId)
 		return false;
 
-	HMODULE hDll = LoadLibrary( szDllName );
-	HOOKPROC procAddress = ( HOOKPROC )GetProcAddress( hDll, "FuncName" ); // TODO: function name costumizable
-	if( !procAddress )
+	if( IsNullOrEmpty( szFuncName ) )
 	{
-		// Function not found
+		GetDllFunctions( szDllName, sFunc );
+		sFunc[0].copy( szFuncName, sFunc[0].length(), 0 );
+	}
+	
+	HMODULE hDll = LoadLibrary( szDllName );
+	HOOKPROC procAddress = ( HOOKPROC )GetProcAddress( hDll, szFuncName );
+	if( procAddress == NULL )
+	{
+		Popup("No function found for Windows Hooking!");
 	}
 
-	SetWindowsHookEx( WH_CBT, procAddress, hDll, dwProcId );
+	SetWindowsHookEx( WH_CBT, procAddress, hDll, GetThreadIdFromProcId( dwProcId ) );
 
 	return true;
 }
@@ -289,7 +338,7 @@ BOOL NtCreateThreadExInjection( DWORD dwProcId, const char *szDllName )
 	HANDLE hThread = bCreateRemoteThread( hProc, ( LPTHREAD_START_ROUTINE )GetProcAddress( GetModuleHandle( "kernel32.dll" ), "LoadLibraryA" ), memory );
 	WaitForSingleObject( hThread, INFINITE );
 	
-	CloseHandle( hThread );
+	CloseHandle( hProc );
 
 	return true;
 }
@@ -335,6 +384,7 @@ BOOL RtlCreateUserThreadInjection( DWORD dwProcId, const char *szDllName )
 	HANDLE hThread = bRtlCreateUserThread( hProc, ( LPTHREAD_START_ROUTINE )GetProcAddress( GetModuleHandle( "kernel32.dll" ), "LoadLibraryA" ), memory );
 	WaitForSingleObject( hThread, INFINITE );
 
+	CloseHandle( hProc );
 	CloseHandle( hThread );
 
 	return true;
@@ -376,7 +426,6 @@ DWORD dwInjThread()
 					break;
 				}
 			}
-
 			Sleep( 1000 );
 		}
 	}

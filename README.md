@@ -1,3 +1,3 @@
 Siringa
 =======
-DLL injection tool.
+Simple, in-depth, DLL injector.
