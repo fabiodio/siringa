@@ -44,7 +44,7 @@
 extern DWORD dwInjThread();
 extern char szExe[MAX_PATH];
 extern char szDll[MAX_DLLS][MAX_PATH];
-extern char szFuncName[MAX_PATH];
+extern char szFuncName[MAX_DLLS][MAX_PATH];
 extern int iMethod;
 extern int bAuto;
 
@@ -102,6 +102,6 @@ DWORD GetProcessId( char *szExeName );
 void GetDllFunctions( const char *szDllName, vector<string>& sList );
 BOOL CreateRemoteThreadInjection( DWORD dwProcId, const char *szDllName );
 BOOL NtCreateThreadExInjection( DWORD dwProcId, const char *szDllName );
-BOOL WindowsHookInjection( DWORD dwProcId, const char *szDllName );
+BOOL WindowsHookInjection( DWORD dwProcId, const char *szDllName, int iDll );
 BOOL APCInjection( DWORD dwProcId, const char *szDllName );
 BOOL RtlCreateUserThreadInjection( DWORD dwProcId, const char *szDllName );

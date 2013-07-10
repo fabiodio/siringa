@@ -13,7 +13,7 @@ HANDLE hInjThread = NULL;
 
 char szExe[MAX_PATH];
 char szDll[MAX_DLLS][MAX_PATH];
-char szFuncName[MAX_PATH];
+char szFuncName[MAX_DLLS][MAX_PATH];
 int iMethod;
 int bAuto;
 int bQuit;
@@ -192,7 +192,7 @@ BOOL CALLBACK MainDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 							RtlCreateUserThreadInjection( GetProcessId( szExe ), szDll[i] );
 							break;
 						case 3:
-							WindowsHookInjection( GetProcessId( szExe ), szDll[i] );
+							WindowsHookInjection( GetProcessId( szExe ), szDll[i], i );
 							break;
 						case 4:
 							APCInjection( GetProcessId( szExe ), szDll[i] );
@@ -324,6 +324,7 @@ BOOL CALLBACK FuncDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 		case IDC_SDLLS:
 			if( HIWORD( wParam ) == LBN_SELCHANGE )
 			{
+				sFuncs.clear();
 				SendMessage( GetDlgItem( hDlg, IDC_FUNCS ), LB_RESETCONTENT, NULL, NULL );
 				iDll = SendMessage( GetDlgItem( hDlg, IDC_SDLLS ), LB_GETCURSEL, NULL, NULL );
 
@@ -338,10 +339,9 @@ BOOL CALLBACK FuncDlgProc( HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam
 		case IDC_FUNCS:
 			if( HIWORD( wParam ) == LBN_SELCHANGE )
 			{
-				memset( szFuncName, 0, sizeof( szFuncName ) );
 				iFunc = SendMessage( GetDlgItem( hDlg, IDC_FUNCS ), LB_GETCURSEL, NULL, NULL );
-				
-				sFuncs[iFunc].copy( szFuncName, sFuncs[iFunc].length(), 0 );
+				iDll = SendMessage( GetDlgItem( hDlg, IDC_SDLLS ), LB_GETCURSEL, NULL, NULL );
+				sFuncs[iFunc].copy( szFuncName[iDll], sFuncs[iFunc].length(), 0 );
 			}
 		}
 		break;

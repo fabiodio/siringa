@@ -158,21 +158,22 @@ BOOL CreateRemoteThreadInjection( DWORD dwProcId, const char *szDllName )
 	return true;
 }
 
-BOOL WindowsHookInjection( DWORD dwProcId, const char *szDllName )
+BOOL WindowsHookInjection( DWORD dwProcId, const char *szDllName, int iDll )
 {
 	vector<string> sFunc;
 
 	if(!dwProcId)
 		return false;
 
-	if( IsNullOrEmpty( szFuncName ) )
+	if( IsNullOrEmpty( szFuncName[iDll] ) )
 	{
+		// gets the first function in the DLL
 		GetDllFunctions( szDllName, sFunc );
-		sFunc[0].copy( szFuncName, sFunc[0].length(), 0 );
+		sFunc[0].copy( szFuncName[iDll], sFunc[0].length(), 0 );
 	}
 	
 	HMODULE hDll = LoadLibrary( szDllName );
-	HOOKPROC procAddress = ( HOOKPROC )GetProcAddress( hDll, szFuncName );
+	HOOKPROC procAddress = ( HOOKPROC )GetProcAddress( hDll, szFuncName[iDll] );
 	if( procAddress == NULL )
 	{
 		Popup("No function found for Windows Hooking!");
@@ -419,7 +420,7 @@ DWORD dwInjThread()
 					RtlCreateUserThreadInjection( GetProcessId( szExe ), szDll[i] );
 					break;
 				case 3:
-					WindowsHookInjection( GetProcessId( szExe ), szDll[i] );
+					WindowsHookInjection( GetProcessId( szExe ), szDll[i], i );
 					break;
 				case 4:
 					APCInjection( GetProcessId( szExe ), szDll[i] );
